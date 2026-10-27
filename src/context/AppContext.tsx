@@ -426,16 +426,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const cloudData = await fetchCloudWorkspace(user.uid);
         if (!isMounted) return;
 
+        const syncKey = `lifepilot_synced_${user.uid}`;
+        const hasSyncedBefore = localStorage.getItem(syncKey) === 'true';
+
         if (cloudData && (cloudData.tasks?.length > 0 || cloudData.goals?.length > 0)) {
-          // Cloud has existing data -> present migration options to prevent silent overwrite
-          setMigrationCloudData(cloudData);
-          setMigrationModalOpen(true);
-          setSyncStatus('idle');
+          // If returning user has synced before or local data is only sample/empty data,
+          // load cloud workspace directly so existing users don't get trapped in an account-setup modal!
+          const isSampleData = tasks.every((t) => initialTasks.some((it) => it.id === t.id));
+          if (hasSyncedBefore || tasks.length === 0 || isSampleData) {
+            applyCloudWorkspace(cloudData);
+            localStorage.setItem(syncKey, 'true');
+            setSyncStatus('synced');
+            setLastSyncedAt(new Date());
+          } else {
+            // First time login on a device with unsynced custom local tasks:
+            // Prompt user with merge options so they don't lose local work
+            setMigrationCloudData(cloudData);
+            setMigrationModalOpen(true);
+            setSyncStatus('idle');
+          }
         } else {
-          // Cloud is empty -> offer to upload local data to cloud
-          setMigrationCloudData(null);
-          setMigrationModalOpen(true);
-          setSyncStatus('idle');
+          // Cloud workspace is empty: upload local data to cloud automatically
+          await saveCloudWorkspace(user.uid, {
+            tasks,
+            goals,
+            habits,
+            projects,
+            notes,
+            learningTopics,
+            userProfile,
+          });
+          localStorage.setItem(syncKey, 'true');
+          setSyncStatus('synced');
+          setLastSyncedAt(new Date());
         }
       } catch (error) {
         console.warn('Initial cloud fetch error:', error);
@@ -520,6 +543,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
       applyCloudWorkspace(merged);
       await saveCloudWorkspace(user.uid, merged);
+      localStorage.setItem(`lifepilot_synced_${user.uid}`, 'true');
       setMigrationModalOpen(false);
       setSyncStatus('synced');
       setLastSyncedAt(new Date());
@@ -537,6 +561,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsMigrating(true);
     try {
       applyCloudWorkspace(migrationCloudData);
+      localStorage.setItem(`lifepilot_synced_${user.uid}`, 'true');
       setMigrationModalOpen(false);
       setSyncStatus('synced');
       setLastSyncedAt(new Date());
@@ -562,6 +587,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         learningTopics,
         userProfile,
       });
+      localStorage.setItem(`lifepilot_synced_${user.uid}`, 'true');
       setMigrationModalOpen(false);
       setSyncStatus('synced');
       setLastSyncedAt(new Date());

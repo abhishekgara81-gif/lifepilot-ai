@@ -41,6 +41,20 @@ export const SettingsPage: React.FC = () => {
     openMigrationModal,
   } = useApp();
   const { user, isConfigured, authError, signInWithGoogle, logout, clearAuthError } = useAuth();
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  const handleSignIn = async () => {
+    setIsSigningIn(true);
+    try {
+      await signInWithGoogle();
+    } catch (err: any) {
+      if (err?.message) {
+        showToast(err.message, 'error');
+      }
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
 
   const [name, setName] = useState(userProfile.name);
   const [title, setTitle] = useState(userProfile.title);
@@ -288,11 +302,12 @@ export const SettingsPage: React.FC = () => {
               </div>
 
               <button
-                onClick={signInWithGoogle}
-                className="inline-flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition-colors cursor-pointer shrink-0"
+                onClick={handleSignIn}
+                disabled={isSigningIn}
+                className="inline-flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition-colors cursor-pointer shrink-0 disabled:opacity-60"
               >
                 <Cloud className="w-4 h-4" />
-                <span>Sign in with Google</span>
+                <span>{isSigningIn ? 'Connecting...' : 'Sign in with Google'}</span>
               </button>
             </div>
           </div>

@@ -46,7 +46,7 @@ This guide walks you through setting up **Google Sign-In** and **Cloud Firestore
 
 ---
 
-## Step 3: Enable Google Authentication
+## Step 3: Enable Google Authentication & Authorize Your Live Domain
 
 1. In the Firebase Console left navigation sidebar, go to **Build → Authentication**.
 2. Click **"Get started"**.
@@ -55,8 +55,11 @@ This guide walks you through setting up **Google Sign-In** and **Cloud Firestore
 5. Select your email address under **Project support email**.
 6. Click **"Save"**.
 7. In the same Authentication section, switch to the **Settings** tab at the top.
-8. Click **Authorized domains**. Verify that `localhost` is listed.
-   *(If you later test via a local tunnel like ngrok or Cloudflare, add your tunnel domain here)*.
+8. Click **Authorized domains**.
+9. Click **"Add domain"** and add your live Render production domain:
+   - **`lifepilot-ai-dgnw.onrender.com`** (enter exact domain without `https://`)
+   - Verify that **`localhost`** is also in the list.
+   > **CRITICAL**: If `lifepilot-ai-dgnw.onrender.com` is not in the Authorized domains list, Google Sign-In will be rejected by Firebase with `auth/unauthorized-domain`.
 
 ---
 

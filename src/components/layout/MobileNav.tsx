@@ -22,7 +22,7 @@ interface MobileNavProps {
 }
 
 export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
-  const { activePage, setActivePage, tasks, userProfile } = useApp();
+  const { activePage, setActivePage, tasks, userProfile, showToast } = useApp();
   const { user, signInWithGoogle } = useAuth();
   const pendingTasksCount = tasks.filter((t) => t.status !== 'completed').length;
   const displayName = user?.displayName || userProfile.name || 'Your Profile';
@@ -33,6 +33,17 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
     .map((part) => part[0])
     .join('')
     .toUpperCase();
+
+  const handleMobileSignIn = async () => {
+    onClose();
+    try {
+      await signInWithGoogle();
+    } catch (err: any) {
+      if (err?.message) {
+        showToast(err.message, 'error');
+      }
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -134,10 +145,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
           </div>
           {!user && (
             <button
-              onClick={() => {
-                onClose();
-                signInWithGoogle();
-              }}
+              onClick={handleMobileSignIn}
               className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs border border-blue-200 transition-colors"
             >
               <Cloud className="w-3.5 h-3.5" />

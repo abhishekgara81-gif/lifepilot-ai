@@ -191,6 +191,21 @@ async function startServer() {
     res.json({ status: 'ok', hasGeminiKey: Boolean(ai) });
   });
 
+  app.get('/api/firebase-config', (_req, res) => {
+    const apiKey = (process.env.VITE_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || '').trim();
+    const projectId = (process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || '').trim();
+    const authDomain = (process.env.VITE_FIREBASE_AUTH_DOMAIN || process.env.FIREBASE_AUTH_DOMAIN || '').trim() || (projectId ? `${projectId}.firebaseapp.com` : '');
+    const storageBucket = (process.env.VITE_FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_STORAGE_BUCKET || '').trim() || (projectId ? `${projectId}.appspot.com` : '');
+    const messagingSenderId = (process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || process.env.FIREBASE_MESSAGING_SENDER_ID || '').trim();
+    const appId = (process.env.VITE_FIREBASE_APP_ID || process.env.FIREBASE_APP_ID || '').trim();
+
+    const isConfigured = Boolean(apiKey && projectId && !apiKey.includes('your_') && !projectId.includes('your_'));
+    res.json({
+      isConfigured,
+      config: isConfigured ? { apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId } : null,
+    });
+  });
+
   // Per-process limit to protect the Gemini quota from accidental rapid retries.
   const generationRequests = new Map<string, { count: number; resetAt: number }>();
   app.post('/api/plan/generate', async (req, res) => {

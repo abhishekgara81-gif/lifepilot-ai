@@ -30,9 +30,24 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
     setEditingTask,
     userProfile,
     syncStatus,
+    showToast,
   } = useApp();
   const { user, signInWithGoogle } = useAuth();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setIsSigningIn(true);
+    try {
+      await signInWithGoogle();
+    } catch (err: any) {
+      if (err?.message) {
+        showToast(err.message, 'error');
+      }
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
 
   const pageInfo = PAGE_TITLES[activePage] || { crumb: 'Workspace', title: 'LifePilot' };
   const todayStr = new Intl.DateTimeFormat(undefined, {
@@ -135,12 +150,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           </div>
         ) : (
           <button
-            onClick={signInWithGoogle}
-            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-300/80 bg-white hover:bg-slate-50 text-[10px] font-semibold text-slate-700 transition-colors shadow-xs"
+            onClick={handleGoogleSignIn}
+            disabled={isSigningIn}
+            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-300/80 bg-white hover:bg-slate-50 text-[10px] font-semibold text-slate-700 transition-colors shadow-xs disabled:opacity-60"
             title="Sign in with your Google account for cross-device synchronization"
           >
             <Cloud className="w-3.5 h-3.5 text-blue-600" />
-            <span>Google Sign-In</span>
+            <span>{isSigningIn ? 'Connecting...' : 'Google Sign-In'}</span>
           </button>
         )}
 

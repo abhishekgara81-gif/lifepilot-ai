@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lifepilot-v1';
+const CACHE_NAME = 'lifepilot-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Static core assets to pre-cache on install
@@ -7,6 +7,7 @@ const PRECACHE_ASSETS = [
   '/offline.html',
   '/manifest.json',
   '/favicon.png',
+  '/lifepilot-icon.png',
   '/icons/favicon-32.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
