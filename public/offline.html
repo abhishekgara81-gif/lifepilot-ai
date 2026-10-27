@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Offline — LifePilot AI</title>
+    <meta name="theme-color" content="#07142F" />
+    <style>
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        min-height: 100vh;
+        background-color: #07142F;
+        color: #F8FAFC;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+      }
+      .card {
+        background: #0B1E45;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 20px;
+        padding: 2.25rem 2rem;
+        max-width: 480px;
+        width: 100%;
+        text-align: center;
+        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+      }
+      .logo-badge {
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 1.5rem;
+        border-radius: 18px;
+        background: #07142F;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      }
+      .logo-badge img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.85rem;
+        border-radius: 9999px;
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #FCA5A5;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 1rem;
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #EF4444;
+      }
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #FFFFFF;
+        margin-bottom: 0.75rem;
+      }
+      p {
+        font-size: 0.925rem;
+        line-height: 1.55;
+        color: #94A3B8;
+        margin-bottom: 1.25rem;
+      }
+      .notice-box {
+        background: rgba(2, 6, 23, 0.45);
+        border: 1px solid rgba(148, 163, 184, 0.15);
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        margin-bottom: 1.5rem;
+        text-align: left;
+      }
+      .notice-box h2 {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #38BDF8;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 0.35rem;
+      }
+      .notice-box p {
+        font-size: 0.8rem;
+        color: #CBD5E1;
+        margin-bottom: 0;
+        line-height: 1.45;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.75rem 1.25rem;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #2563EB, #1D4ED8);
+        color: #FFFFFF;
+        font-size: 0.925rem;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.15s ease, background 0.15s ease;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+      }
+      .btn:hover {
+        background: linear-gradient(135deg, #1D4ED8, #1E40AF);
+      }
+      .btn:active {
+        transform: scale(0.98);
+      }
+      footer {
+        margin-top: 1.5rem;
+        font-size: 0.75rem;
+        color: #64748B;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="logo-badge">
+        <img src="/icons/icon-192.png" alt="LifePilot AI" />
+      </div>
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        <span>Offline Mode</span>
+      </div>
+      <h1>You're Currently Offline</h1>
+      <p>
+        LifePilot AI requires an internet connection to load new resources and contact the server.
+      </p>
+
+      <div class="notice-box">
+        <h2>AI Planning Status</h2>
+        <p>
+          AI action plan generation powered by Google Gemini requires live internet connectivity and cannot run offline. Your previously saved tasks and local data in this browser remain safe.
+        </p>
+      </div>
+
+      <button class="btn" onclick="window.location.reload()">
+        <span>Check Connection &amp; Retry</span>
+      </button>
+    </div>
+
+    <footer>
+      LifePilot AI · Personal Action Planner
+    </footer>
+
+    <script>
+      // Automatically reload when network connectivity returns
+      window.addEventListener('online', function () {
+        window.location.reload();
+      });
+    </script>
+  </body>
+</html>
+

@@ -1,0 +1,6 @@
+{
+  "name": "LifePilot AI — Your Personal AI Action Planner",
+  "description": "Turn goals into actionable tasks, realistic schedules, daily plans, and measurable progress for students and self-driven achievers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
