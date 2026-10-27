@@ -100,7 +100,7 @@ export const TasksPage: React.FC = () => {
               onClick={() => setViewMode('list')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 viewMode === 'list'
-                  ? 'bg-blue-600 text-slate-900 shadow-sm'
+                  ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -111,7 +111,7 @@ export const TasksPage: React.FC = () => {
               onClick={() => setViewMode('kanban')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 viewMode === 'kanban'
-                  ? 'bg-blue-600 text-slate-900 shadow-sm'
+                  ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -187,7 +187,7 @@ export const TasksPage: React.FC = () => {
 
           <button
             onClick={handleCreateNew}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl text-xs font-semibold shadow-md shadow-blue-600/30 transition-all shrink-0 cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-blue-600/30 transition-all shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Task</span>
@@ -218,7 +218,7 @@ export const TasksPage: React.FC = () => {
           </p>
           <button
             onClick={handleCreateNew}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl text-xs font-semibold shadow-md shadow-blue-600/30 transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-blue-600/30 transition-all"
           >
             <Plus className="w-4 h-4" />
             <span>Create First Task</span>

@@ -20,6 +20,7 @@ import {
   getRelativeDate,
   dailySpokenEnglishTask,
   syncDailyEnglishTask,
+  calculateHabitStreak,
 } from '../data/initialData';
 import { checkAIHealth } from '../services/aiPlannerService';
 import { useAuth } from './AuthContext';
@@ -169,9 +170,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [migrationCloudData, setMigrationCloudData] = useState<CloudWorkspacePayload | null>(null);
   const [isMigrating, setIsMigrating] = useState(false);
-  const [hasPreSyncBackup, setHasPreSyncBackup] = useState(() =>
-    Boolean(localStorage.getItem(STORAGE_KEYS.PRE_SYNC_BACKUP))
-  );
+  const [hasPreSyncBackup, setHasPreSyncBackup] = useState(() => {
+    try {
+      return Boolean(localStorage.getItem(STORAGE_KEYS.PRE_SYNC_BACKUP));
+    } catch {
+      return false;
+    }
+  });
 
   const isRemoteUpdateRef = useRef(false);
   const activeUnsubRef = useRef<(() => void) | null>(null);
@@ -208,7 +213,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [goals, setGoals] = useState<Goal[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.GOALS);
-      return saved ? JSON.parse(saved) : initialGoals;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return initialGoals;
     } catch {
       return initialGoals;
     }
@@ -217,7 +226,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [habits, setHabits] = useState<Habit[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.HABITS);
-      return saved ? JSON.parse(saved) : initialHabits;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return initialHabits;
     } catch {
       return initialHabits;
     }
@@ -226,7 +239,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [projects, setProjects] = useState<Project[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PROJECTS);
-      return saved ? JSON.parse(saved) : initialProjects;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return initialProjects;
     } catch {
       return initialProjects;
     }
@@ -235,7 +252,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notes, setNotes] = useState<Note[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.NOTES);
-      return saved ? JSON.parse(saved) : initialNotes;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return initialNotes;
     } catch {
       return initialNotes;
     }
@@ -244,7 +265,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [learningTopics, setLearningTopics] = useState<LearningTopic[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.TOPICS);
-      return saved ? JSON.parse(saved) : initialLearningTopics;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return initialLearningTopics;
     } catch {
       return initialLearningTopics;
     }
@@ -253,7 +278,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PROFILE);
-      return saved ? JSON.parse(saved) : initialProfile;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+      }
+      return initialProfile;
     } catch {
       return initialProfile;
     }
@@ -298,6 +327,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const handleOnline = () => {
       if (user) {
         setSyncStatus('idle');
+        // Synchronize pending local edits once internet connectivity is restored
+        saveCloudWorkspace(user.uid, {
+          tasks,
+          goals,
+          habits,
+          projects,
+          notes,
+          learningTopics,
+          userProfile,
+        })
+          .then(() => {
+            setSyncStatus('synced');
+            setLastSyncedAt(new Date());
+          })
+          .catch((err) => {
+            console.warn('Post-reconnection sync failed:', err);
+          });
       }
     };
     const handleOffline = () => {
@@ -311,7 +357,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [user]);
+  }, [user, tasks, goals, habits, projects, notes, learningTopics, userProfile]);
 
   // Save changes to localStorage immediately
   useEffect(() => {
@@ -792,20 +838,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ? h.completedDates.filter((d) => d !== dateStr)
             : [...h.completedDates, dateStr];
 
-          const sorted = [...newDates].sort();
-          let currentStreak = 0;
-          let temp = 0;
-          for (let i = 0; i < sorted.length; i++) {
-            temp++;
-          }
-          currentStreak = Math.min(newDates.length, 30);
-          const best = Math.max(h.bestStreak, currentStreak);
+          const { streak, bestStreak } = calculateHabitStreak(newDates);
 
           return {
             ...h,
             completedDates: newDates,
-            streak: currentStreak,
-            bestStreak: best,
+            streak,
+            bestStreak: Math.max(h.bestStreak, bestStreak),
           };
         }
         return h;
@@ -946,7 +985,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           priority: item.priority,
           status: 'todo',
           category: item.category,
-          dueDate: getRelativeDate(item.dueDateOffsetDays || 3),
+          dueDate: getRelativeDate(typeof item.dueDateOffsetDays === 'number' ? item.dueDateOffsetDays : 3),
           dueTime: '17:00',
           startTime: '17:00',
           endTime: '18:00',
@@ -1009,7 +1048,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const clearAllData = () => {
-    setTasks([]);
+    setTasks(syncDailyEnglishTask([]));
     setGoals([]);
     setHabits([]);
     setProjects([]);

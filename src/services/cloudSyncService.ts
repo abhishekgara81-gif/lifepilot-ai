@@ -15,6 +15,7 @@ import {
   LearningTopic,
   UserProfile,
 } from '../types';
+import { calculateHabitStreak } from '../data/initialData';
 
 export interface CloudWorkspacePayload {
   tasks: Task[];
@@ -136,11 +137,12 @@ export function mergeWorkspaces(
       // Merge completion dates
       const existing = habitMap.get(h.id)!;
       const mergedDates = Array.from(new Set([...existing.completedDates, ...h.completedDates]));
+      const { streak, bestStreak } = calculateHabitStreak(mergedDates);
       habitMap.set(h.id, {
         ...existing,
         completedDates: mergedDates,
-        streak: Math.max(existing.streak, h.streak),
-        bestStreak: Math.max(existing.bestStreak, h.bestStreak),
+        streak,
+        bestStreak: Math.max(existing.bestStreak, h.bestStreak, bestStreak),
       });
     }
   });

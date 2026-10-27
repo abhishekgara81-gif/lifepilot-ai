@@ -155,7 +155,7 @@ export const CalendarPage: React.FC = () => {
             <button
               onClick={() => setCalendarView('week')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                calendarView === 'week' ? 'bg-blue-600 text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+                calendarView === 'week' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Week View
@@ -163,7 +163,7 @@ export const CalendarPage: React.FC = () => {
             <button
               onClick={() => setCalendarView('day')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                calendarView === 'day' ? 'bg-blue-600 text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+                calendarView === 'day' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Day View
@@ -175,7 +175,7 @@ export const CalendarPage: React.FC = () => {
               setEditingTask(null);
               setTaskModalOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl text-xs font-semibold shadow-md shadow-blue-600/30 transition-all shrink-0 cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-blue-600/30 transition-all shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Schedule Task</span>
@@ -221,7 +221,7 @@ export const CalendarPage: React.FC = () => {
                 </div>
                 <div
                   className={`text-sm font-bold mt-0.5 tabular-nums inline-block px-2 py-0.5 rounded-full ${
-                    d.isToday ? 'bg-blue-600 text-slate-900' : 'text-slate-800'
+                    d.isToday ? 'bg-blue-600 text-white' : 'text-slate-800'
                   }`}
                 >
                   {d.dayNumber}
@@ -339,7 +339,7 @@ export const CalendarPage: React.FC = () => {
             </div>
             <button
               onClick={() => handleSlotClick(selectedDay.dateStr, '09:00')}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl text-xs font-semibold self-start sm:self-auto"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold self-start sm:self-auto"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add to this day</span>

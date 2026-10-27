@@ -230,7 +230,7 @@ export const GoalModal: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs font-semibold text-slate-900 bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/30"
+              className="px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/30"
             >
               {editingGoal ? 'Save Changes' : 'Establish Goal'}
             </button>

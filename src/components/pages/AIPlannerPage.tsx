@@ -305,7 +305,7 @@ export const AIPlannerPage: React.FC = () => {
             onClick={handleGenerate}
             disabled={loading}
             aria-busy={loading}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-slate-900 font-semibold rounded-xl text-xs sm:text-sm shadow-lg shadow-blue-600/30 transition-all shrink-0 cursor-pointer"
+            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-lg shadow-blue-600/30 transition-all shrink-0 cursor-pointer"
           >
             {loading ? (
               <>

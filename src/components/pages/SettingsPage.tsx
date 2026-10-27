@@ -392,7 +392,7 @@ export const SettingsPage: React.FC = () => {
           </div>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl text-xs font-semibold shadow-md shadow-blue-600/30 transition-all cursor-pointer"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-blue-600/30 transition-all cursor-pointer"
           >
             Save Preferences
           </button>
@@ -541,7 +541,7 @@ export const SettingsPage: React.FC = () => {
             <div className="flex gap-2">
               <button
                 onClick={handleImportSubmit}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl text-xs font-semibold"
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold"
               >
                 Apply Import
               </button>

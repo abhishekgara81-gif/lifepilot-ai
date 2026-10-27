@@ -12,7 +12,7 @@ if (
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1')
 ) {
-  window.addEventListener('load', () => {
+  const registerSW = () => {
     navigator.serviceWorker
       .register('/sw.js', { scope: '/' })
       .then((registration) => {
@@ -23,5 +23,11 @@ if (
       .catch((error) => {
         console.warn('[LifePilot PWA] Service Worker registration failed:', error);
       });
-  });
+  };
+
+  if (document.readyState === 'complete') {
+    registerSW();
+  } else {
+    window.addEventListener('load', registerSW);
+  }
 }

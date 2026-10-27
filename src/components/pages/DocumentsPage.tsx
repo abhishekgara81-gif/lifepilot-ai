@@ -69,7 +69,7 @@ export const DocumentsPage: React.FC = () => {
 
         <button
           onClick={handleCreateNew}
-          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl text-xs sm:text-sm font-semibold shadow-md shadow-blue-600/30 transition-all shrink-0 cursor-pointer"
+          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md shadow-blue-600/30 transition-all shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>New Document</span>
@@ -84,7 +84,7 @@ export const DocumentsPage: React.FC = () => {
             onClick={() => setSelectedCategory(cat)}
             className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors ${
               selectedCategory === cat
-                ? 'bg-blue-600 text-slate-900 shadow-sm'
+                ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-900'
             }`}
           >
@@ -193,7 +193,7 @@ export const DocumentsPage: React.FC = () => {
 
                   <button
                     onClick={() => handleEdit(activeNote)}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     <span>Edit Note</span>

@@ -2,10 +2,10 @@ import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
-const env = import.meta.env;
+const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : (process.env || {});
 
-const rawApiKey = (env.VITE_FIREBASE_API_KEY || '').trim();
-const rawProjectId = (env.VITE_FIREBASE_PROJECT_ID || '').trim();
+const rawApiKey = (env.VITE_FIREBASE_API_KEY || env.FIREBASE_API_KEY || '').trim();
+const rawProjectId = (env.VITE_FIREBASE_PROJECT_ID || env.FIREBASE_PROJECT_ID || '').trim();
 
 // Check whether real Firebase config keys are present (not empty and not placeholders)
 export let isFirebaseConfigured: boolean = Boolean(

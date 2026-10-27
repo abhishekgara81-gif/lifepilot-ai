@@ -38,6 +38,70 @@ export function formatScheduleRange(startTime?: string, endTime?: string, recurr
   return rangeStr;
 }
 
+export function calculateHabitStreak(completedDates: string[]): { streak: number; bestStreak: number } {
+  if (!completedDates || completedDates.length === 0) {
+    return { streak: 0, bestStreak: 0 };
+  }
+
+  const uniqueDates = Array.from(new Set(completedDates.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))));
+  if (uniqueDates.length === 0) {
+    return { streak: 0, bestStreak: 0 };
+  }
+
+  const dateSet = new Set(uniqueDates);
+
+  // 1. Current streak: consecutive days ending today or yesterday
+  const todayStr = getRelativeDate(0);
+  const yesterdayStr = getRelativeDate(-1);
+
+  let currentStreak = 0;
+  if (dateSet.has(todayStr)) {
+    let offset = 0;
+    while (dateSet.has(getRelativeDate(offset))) {
+      currentStreak++;
+      offset--;
+    }
+  } else if (dateSet.has(yesterdayStr)) {
+    let offset = -1;
+    while (dateSet.has(getRelativeDate(offset))) {
+      currentStreak++;
+      offset--;
+    }
+  }
+
+  // 2. Best streak: longest consecutive daily run in history
+  const sortedDates = [...uniqueDates].sort();
+  let maxStreak = 0;
+  let runningStreak = 0;
+  let prevDate: Date | null = null;
+
+  for (const dateStr of sortedDates) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const currentDate = new Date(Date.UTC(year, month - 1, day));
+
+    if (prevDate === null) {
+      runningStreak = 1;
+    } else {
+      const diffMs = currentDate.getTime() - prevDate.getTime();
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays === 1) {
+        runningStreak++;
+      } else if (diffDays > 1) {
+        runningStreak = 1;
+      }
+    }
+    if (runningStreak > maxStreak) {
+      maxStreak = runningStreak;
+    }
+    prevDate = currentDate;
+  }
+
+  return {
+    streak: currentStreak,
+    bestStreak: Math.max(maxStreak, currentStreak),
+  };
+}
+
 export const initialProfile: UserProfile = {
   name: 'Alex Morgan',
   title: 'Computer Science & AI Undergraduate',

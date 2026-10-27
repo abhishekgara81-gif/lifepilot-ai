@@ -162,7 +162,7 @@ export const StudentCenterPage: React.FC = () => {
                 onClick={() => handleModeSwitch('focus')}
                 className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                   timerMode === 'focus'
-                    ? 'bg-blue-600 text-slate-900 shadow-sm'
+                    ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
@@ -172,7 +172,7 @@ export const StudentCenterPage: React.FC = () => {
                 onClick={() => handleModeSwitch('shortBreak')}
                 className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                   timerMode === 'shortBreak'
-                    ? 'bg-blue-600 text-slate-900 shadow-sm'
+                    ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
@@ -182,7 +182,7 @@ export const StudentCenterPage: React.FC = () => {
                 onClick={() => handleModeSwitch('longBreak')}
                 className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                   timerMode === 'longBreak'
-                    ? 'bg-blue-600 text-slate-900 shadow-sm'
+                    ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
@@ -214,7 +214,7 @@ export const StudentCenterPage: React.FC = () => {
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() => setIsRunning(!isRunning)}
-                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-slate-900 font-semibold rounded-xl text-sm shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
               >
                 {isRunning ? (
                   <>
@@ -262,7 +262,7 @@ export const StudentCenterPage: React.FC = () => {
 
             <button
               onClick={() => setShowAddTopic(!showAddTopic)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl text-xs font-semibold shrink-0 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shrink-0 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Topic</span>
@@ -319,7 +319,7 @@ export const StudentCenterPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl text-xs font-semibold"
+                  className="px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold"
                 >
                   Add Topic
                 </button>

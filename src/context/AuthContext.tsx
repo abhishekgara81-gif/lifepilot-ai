@@ -134,10 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
-      if (
-        error.code === 'auth/popup-blocked' ||
-        error.code === 'auth/cancelled-popup-request'
-      ) {
+      if (error.code === 'auth/popup-blocked') {
         // Fallback for mobile browsers or aggressive popup blockers
         try {
           await signInWithRedirect(auth, googleProvider);
@@ -149,8 +146,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      if (error.code === 'auth/popup-closed-by-user') {
-        // User closed the popup window deliberately
+      if (
+        error.code === 'auth/popup-closed-by-user' ||
+        error.code === 'auth/cancelled-popup-request'
+      ) {
+        // User closed the popup window deliberately or initiated another request
         return;
       }
 

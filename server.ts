@@ -178,6 +178,7 @@ function clientErrorFor(category: GeminiErrorCategory): string {
 
 async function startServer() {
   const app = express();
+  app.set('trust proxy', 1);
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   const isProduction = process.env.NODE_ENV === 'production';
   const configuredKey = process.env.GEMINI_API_KEY?.trim();

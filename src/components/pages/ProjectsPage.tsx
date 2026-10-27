@@ -77,7 +77,7 @@ export const ProjectsPage: React.FC = () => {
 
         <button
           onClick={() => setProjectModalOpen(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl text-xs sm:text-sm font-semibold shadow-md shadow-blue-600/30 transition-all shrink-0 cursor-pointer"
+          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md shadow-blue-600/30 transition-all shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>New Project</span>
@@ -91,7 +91,7 @@ export const ProjectsPage: React.FC = () => {
             <FolderKanban className="mx-auto h-5 w-5 text-slate-500" />
             <p className="mt-3 text-sm font-semibold text-slate-800">No projects to show</p>
             <p className="mt-1 text-xs text-slate-500">Create a workspace to connect tasks and track project progress.</p>
-            <button onClick={() => setProjectModalOpen(true)} className="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-slate-900 transition-colors hover:bg-blue-700">
+            <button onClick={() => setProjectModalOpen(true)} className="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700">
               Create project
             </button>
           </div>
@@ -198,7 +198,7 @@ export const ProjectsPage: React.FC = () => {
             <div className="flex items-center gap-3">
               <button
                 onClick={handleAddTaskForProject}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl text-xs font-semibold shadow-md shadow-blue-600/30 transition-all shrink-0 cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-blue-600/30 transition-all shrink-0 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Project Task</span>

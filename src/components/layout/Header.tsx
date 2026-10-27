@@ -179,7 +179,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
         )}
         <button
           onClick={handleQuickAddTask}
-          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-2.5 py-2 text-[10px] font-semibold text-slate-900 shadow-md shadow-blue-900/15 transition-colors hover:bg-blue-700 sm:px-3"
+          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-2.5 py-2 text-[10px] font-semibold text-white shadow-md shadow-blue-900/15 transition-colors hover:bg-blue-700 sm:px-3"
         >
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">New task</span>
