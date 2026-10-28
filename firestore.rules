@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ============================================================================
+    // LifePilot AI — Cloud Firestore Security Rules (Student Success Platform)
+    // ============================================================================
+    // Core Security Model:
+    // 1. Strict per-user isolation: Every student document and subcollection under
+    //    /users/{userId} is strictly accessible ONLY by that authenticated user.
+    // 2. Unauthenticated access is completely rejected.
+    // 3. Impersonation prevention: request.auth.uid must exactly match {userId}.
+    // 4. Default-deny on all top-level collections outside /users.
+    // ============================================================================
+
+    match /users/{userId} {
+      // User profile document
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // User workspace and all subcollections (tasks, goals, habits, notes, tests, syllabus)
+      match /{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Explicit Default Deny for all other collections or root queries
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

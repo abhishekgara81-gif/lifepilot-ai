@@ -3,15 +3,16 @@ import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
-  Sparkles,
+  BookOpen,
+  Star,
+  Clock,
+  FileCheck2,
+  Briefcase,
   CheckSquare,
   Calendar,
   Target,
-  FolderKanban,
-  GraduationCap,
-  FileText,
-  BarChart3,
   Settings,
+  Bell,
   X,
   Cloud,
 } from 'lucide-react';
@@ -22,7 +23,7 @@ interface MobileNavProps {
 }
 
 export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
-  const { activePage, setActivePage, tasks, userProfile, showToast } = useApp();
+  const { activePage, setActivePage, tasks, userProfile, unreadNotificationsCount, showToast } = useApp();
   const { user, signInWithGoogle } = useAuth();
   const pendingTasksCount = tasks.filter((t) => t.status !== 'completed').length;
   const displayName = user?.displayName || userProfile.name || 'Your Profile';
@@ -48,16 +49,21 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'planner', label: 'AI Planner', icon: Sparkles },
-    { id: 'tasks', label: 'My Tasks', icon: CheckSquare, badge: pendingTasksCount || undefined },
-    { id: 'calendar', label: 'Calendar', icon: Calendar },
-    { id: 'goals', label: 'Goals & Habits', icon: Target },
-    { id: 'projects', label: 'Projects', icon: FolderKanban },
-    { id: 'student', label: 'Learning Center', icon: GraduationCap },
-    { id: 'documents', label: 'Documents', icon: FileText },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
+    { id: 'syllabus', label: 'My Learning', icon: BookOpen },
+    { id: 'questions', label: 'Question Bank', icon: Star, badge: '3★' },
+    { id: 'planner', label: 'Study Planner', icon: Clock },
+    { id: 'tests', label: 'Tests & Evaluation', icon: FileCheck2 },
+    {
+      id: 'interviews',
+      label: userProfile.showPlacementModule === false ? 'Viva & Oral Prep' : 'Mock Interview',
+      icon: Briefcase,
+    },
+    { id: 'notifications', label: 'Notifications', icon: Bell, badge: unreadNotificationsCount || undefined },
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'tasks', label: 'My Tasks', icon: CheckSquare, badge: pendingTasksCount || undefined },
+    { id: 'calendar', label: 'Exam Calendar', icon: Calendar },
+    { id: 'goals', label: 'Goals & Habits', icon: Target },
   ];
 
   const handleSelect = (id: string) => {

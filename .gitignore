@@ -11,3 +11,17 @@ coverage/
 .env.development
 *.local
 !.env.example
+
+# Development & Diagnostic Scratch Files
+scratch/
+.vscode/
+.idea/
+test_*.ts
+test_*.js
+*.tmp
+*.bak
+screenshot_*.png
+screenshots/
+browser_diagnostics/
+
+

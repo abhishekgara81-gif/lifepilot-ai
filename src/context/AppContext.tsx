@@ -8,6 +8,15 @@ import {
   LearningTopic,
   UserProfile,
   AIPlan,
+  StudentSubject,
+  SyllabusUnit,
+  QuestionItem,
+  CrashStudyPlan,
+  CrashStudyTask,
+  TestAttemptRecord,
+  InterviewReport,
+  AppNotification,
+  EducationLevel,
 } from '../types';
 import {
   initialTasks,
@@ -17,6 +26,13 @@ import {
   initialNotes,
   initialLearningTopics,
   initialProfile,
+  initialSubjects,
+  initialQuestions,
+  initialCrashPlan,
+  initialTestAttempts,
+  initialInterviewReports,
+  initialNotifications,
+  getStarterSubjectsForLevel,
   getRelativeDate,
   dailySpokenEnglishTask,
   syncDailyEnglishTask,
@@ -98,6 +114,57 @@ interface AppContextType {
   // User Profile
   userProfile: UserProfile;
   updateUserProfile: (updates: Partial<UserProfile>) => void;
+  switchAcademicLevel: (level: EducationLevel, options?: { loadStarterSubjects?: boolean }) => void;
+
+  // Notifications
+  notifications: AppNotification[];
+  unreadNotificationsCount: number;
+  addNotification: (n: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => void;
+  markNotificationRead: (id: string) => void;
+  clearAllNotifications: () => void;
+  requestBrowserNotificationPermission: () => Promise<NotificationPermission>;
+
+  // Theme & Appearance
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
+
+  // ==========================================
+  // STUDENT SUCCESS PLATFORM MODULE ACTIONS
+  // ==========================================
+
+  // Module 1: Syllabus & Notes
+  subjects: StudentSubject[];
+  selectedSubjectId: string;
+  setSelectedSubjectId: (id: string) => void;
+  addSubject: (subject: Omit<StudentSubject, 'id'>) => StudentSubject;
+  updateSubject: (id: string, updates: Partial<StudentSubject>) => void;
+  deleteSubject: (id: string) => void;
+  addUnitToSubject: (subjectId: string, unit: { unitNumber: number; title: string; topics: string[]; notesText?: string }) => void;
+
+  // Module 2: Question Bank
+  questions: QuestionItem[];
+  addQuestion: (q: Omit<QuestionItem, 'id' | 'createdAt'>) => QuestionItem;
+  deleteQuestion: (id: string) => void;
+  toggleBookmarkQuestion: (id: string) => void;
+  updateQuestionRevisionStatus: (id: string, status: 'not_revised' | 'needs_practice' | 'mastered') => void;
+  addCustomQuestion: (q: Omit<QuestionItem, 'id' | 'createdAt'>) => QuestionItem;
+
+  // Module 3: Crash Study Planner
+  crashPlans: CrashStudyPlan[];
+  activeCrashPlan: CrashStudyPlan | null;
+  saveCrashPlan: (plan: CrashStudyPlan) => void;
+  toggleCrashTask: (planId: string, taskId: string) => void;
+  rescheduleMissedTasks: (planId: string) => void;
+
+  // Module 4: Multimodal Test Copies
+  testAttempts: TestAttemptRecord[];
+  saveTestAttempt: (record: TestAttemptRecord) => void;
+  deleteTestAttempt: (id: string) => void;
+
+  // Module 5: Mock Interview Reports
+  interviewReports: InterviewReport[];
+  saveInterviewReport: (report: InterviewReport) => void;
+  deleteInterviewReport: (id: string) => void;
 
   // AI Plan approval & import
   approveAndSavePlan: (plan: AIPlan) => void;
@@ -145,12 +212,27 @@ const STORAGE_KEYS = {
   PROFILE: 'lifepilot_profile_v1',
   SIDEBAR: 'lifepilot_sidebar_collapsed',
   PRE_SYNC_BACKUP: 'lifepilot_backup_pre_sync',
+  SUBJECTS: 'lifepilot_student_subjects_v1',
+  QUESTIONS: 'lifepilot_student_questions_v1',
+  CRASH_PLANS: 'lifepilot_student_crash_plans_v1',
+  TEST_ATTEMPTS: 'lifepilot_student_test_attempts_v1',
+  INTERVIEW_REPORTS: 'lifepilot_student_interview_reports_v1',
+  NOTIFICATIONS: 'lifepilot_student_notifications_v1',
+  THEME: 'lifepilot_theme_mode',
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isConfigured } = useAuth();
 
-  const [activePage, setActivePage] = useState<string>('dashboard');
+  const [activePage, setActivePage] = useState<string>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const urlPage = new URLSearchParams(window.location.search).get('page');
+        if (urlPage) return urlPage;
+      }
+    } catch {}
+    return 'dashboard';
+  });
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     try {
@@ -285,6 +367,118 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return initialProfile;
     } catch {
       return initialProfile;
+    }
+  });
+
+  // ==========================================
+  // STUDENT SUCCESS PLATFORM MODULE STATES
+  // ==========================================
+
+  // Module 1: Customized Syllabus & Notes
+  const [subjects, setSubjects] = useState<StudentSubject[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.SUBJECTS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      return initialSubjects;
+    } catch {
+      return initialSubjects;
+    }
+  });
+
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>(() => {
+    return initialSubjects[0]?.id || '';
+  });
+
+  // Module 2: Smart Star-Rating Question Bank
+  const [questions, setQuestions] = useState<QuestionItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.QUESTIONS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      return initialQuestions;
+    } catch {
+      return initialQuestions;
+    }
+  });
+
+  // Module 3: Day-Wise Crash Study Planner
+  const [crashPlans, setCrashPlans] = useState<CrashStudyPlan[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.CRASH_PLANS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      return [initialCrashPlan];
+    } catch {
+      return [initialCrashPlan];
+    }
+  });
+
+  const activeCrashPlan = crashPlans.find((cp) => cp.subjectId === selectedSubjectId) || crashPlans[0] || null;
+
+  // Module 4: Multimodal Test Copies
+  const [testAttempts, setTestAttempts] = useState<TestAttemptRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.TEST_ATTEMPTS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      return initialTestAttempts;
+    } catch {
+      return initialTestAttempts;
+    }
+  });
+
+  // Module 5: Mock Interview Reports
+  const [interviewReports, setInterviewReports] = useState<InterviewReport[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.INTERVIEW_REPORTS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      return initialInterviewReports;
+    } catch {
+      return initialInterviewReports;
+    }
+  });
+
+  // Notifications State
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      return initialNotifications;
+    } catch {
+      return initialNotifications;
+    }
+  });
+
+  // Theme State
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const urlTheme = new URLSearchParams(window.location.search).get('theme');
+        if (urlTheme === 'dark' || urlTheme === 'light') return urlTheme;
+      }
+      const saved = localStorage.getItem(STORAGE_KEYS.THEME);
+      if (saved === 'dark' || saved === 'light') return saved;
+      if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+      return 'light';
+    } catch {
+      return 'light';
     }
   });
 
@@ -423,6 +617,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Storage save failed:', e);
     }
   }, [sidebarCollapsed]);
+
+  // Persist Student Platform Modules
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.SUBJECTS, JSON.stringify(subjects));
+    } catch (e) {
+      console.warn('Storage save failed:', e);
+    }
+  }, [subjects]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.QUESTIONS, JSON.stringify(questions));
+    } catch (e) {
+      console.warn('Storage save failed:', e);
+    }
+  }, [questions]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.CRASH_PLANS, JSON.stringify(crashPlans));
+    } catch (e) {
+      console.warn('Storage save failed:', e);
+    }
+  }, [crashPlans]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.TEST_ATTEMPTS, JSON.stringify(testAttempts));
+    } catch (e) {
+      console.warn('Storage save failed:', e);
+    }
+  }, [testAttempts]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.INTERVIEW_REPORTS, JSON.stringify(interviewReports));
+    } catch (e) {
+      console.warn('Storage save failed:', e);
+    }
+  }, [interviewReports]);
+
+  // Persist Notifications & Theme
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+    } catch (e) {
+      console.warn('Storage save failed:', e);
+    }
+  }, [notifications]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.THEME, theme);
+      if (typeof document !== 'undefined') {
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    } catch (e) {
+      console.warn('Theme save failed:', e);
+    }
+  }, [theme]);
 
   // Apply cloud data to local state
   const applyCloudWorkspace = (
@@ -944,6 +1203,306 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Profile preferences updated', 'success');
   };
 
+  const switchAcademicLevel = (level: EducationLevel, options?: { loadStarterSubjects?: boolean }) => {
+    const isHigherEdu = level === 'engineering' || level === 'college';
+    updateUserProfile({
+      educationLevel: level,
+      showPlacementModule: isHigherEdu,
+    });
+    if (options?.loadStarterSubjects) {
+      const starters = getStarterSubjectsForLevel(level);
+      setSubjects(starters);
+      if (starters.length > 0) {
+        setSelectedSubjectId(starters[0].id);
+      }
+      showToast(`Loaded curriculum presets for ${level.replace('_', ' ').toUpperCase()}`, 'success');
+    }
+  };
+
+  // Notifications Actions
+  const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
+
+  const addNotification = (n: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
+    const newNotif: AppNotification = {
+      ...n,
+      id: `notif-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
+
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(newNotif.title, {
+          body: newNotif.message,
+          icon: '/icons/lifepilot-icon.png',
+        });
+      } catch {
+        // Ignore native notification restriction
+      }
+    }
+  };
+
+  const markNotificationRead = (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  };
+
+  const clearAllNotifications = () => {
+    setNotifications([]);
+    showToast('All notifications cleared', 'info');
+  };
+
+  const requestBrowserNotificationPermission = async (): Promise<NotificationPermission> => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      showToast('Browser notifications are not supported in this browser.', 'warning');
+      return 'denied';
+    }
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        showToast('Browser notifications enabled successfully!', 'success');
+        updateUserProfile({
+          notificationPreferences: {
+            ...(userProfile.notificationPreferences || {
+              enabled: true,
+              leadMinutes: 15,
+              quietHoursStart: '23:00',
+              quietHoursEnd: '07:00',
+              dailyBriefingTime: '08:00',
+              browserAllowed: true,
+            }),
+            browserAllowed: true,
+          },
+        });
+      } else {
+        showToast('Browser notification permission was not granted.', 'info');
+      }
+      return permission;
+    } catch {
+      return 'denied';
+    }
+  };
+
+  // Theme Actions
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  // ==========================================
+  // MODULE 1: Syllabus & Notes Actions
+  // ==========================================
+  const addSubject = (subjectData: Omit<StudentSubject, 'id'>): StudentSubject => {
+    const newSub: StudentSubject = {
+      ...subjectData,
+      id: `sub-${Date.now()}`,
+      units: subjectData.units || [],
+    };
+    setSubjects((prev) => [newSub, ...prev]);
+    setSelectedSubjectId(newSub.id);
+    showToast(`Subject "${newSub.name}" added to syllabus`, 'success');
+    return newSub;
+  };
+
+  const updateSubject = (id: string, updates: Partial<StudentSubject>) => {
+    setSubjects((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+    showToast('Subject syllabus updated', 'info');
+  };
+
+  const deleteSubject = (id: string) => {
+    setSubjects((prev) => prev.filter((s) => s.id !== id));
+    if (selectedSubjectId === id) {
+      const remaining = subjects.filter((s) => s.id !== id);
+      setSelectedSubjectId(remaining[0]?.id || '');
+    }
+    showToast('Subject removed', 'warning');
+  };
+
+  const addUnitToSubject = (
+    subjectId: string,
+    unitData: { unitNumber: number; title: string; topics: string[]; notesText?: string }
+  ) => {
+    const newUnit: SyllabusUnit = {
+      ...unitData,
+      id: `u-${Date.now()}`,
+    };
+    setSubjects((prev) =>
+      prev.map((s) => {
+        if (s.id === subjectId) {
+          return {
+            ...s,
+            units: [...s.units, newUnit],
+          };
+        }
+        return s;
+      })
+    );
+    showToast(`Unit ${unitData.unitNumber} added to subject`, 'success');
+  };
+
+  // ==========================================
+  // MODULE 2: Question Bank Actions
+  // ==========================================
+  const addQuestion = (qData: Omit<QuestionItem, 'id' | 'createdAt'>): QuestionItem => {
+    const newQ: QuestionItem = {
+      ...qData,
+      id: `q-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    setQuestions((prev) => [newQ, ...prev]);
+    showToast('New question saved to bank', 'success');
+    return newQ;
+  };
+
+  const deleteQuestion = (id: string) => {
+    setQuestions((prev) => prev.filter((q) => q.id !== id));
+    showToast('Question removed from bank', 'warning');
+  };
+
+  const toggleBookmarkQuestion = (id: string) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, bookmarked: !q.bookmarked } : q))
+    );
+  };
+
+  const updateQuestionRevisionStatus = (id: string, status: 'not_revised' | 'needs_practice' | 'mastered') => {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, revisionStatus: status } : q))
+    );
+  };
+
+  const addCustomQuestion = (qData: Omit<QuestionItem, 'id' | 'createdAt'>): QuestionItem => {
+    return addQuestion(qData);
+  };
+
+  // ==========================================
+  // MODULE 3: Crash Study Planner Actions
+  // ==========================================
+  const saveCrashPlan = (plan: CrashStudyPlan) => {
+    setCrashPlans((prev) => {
+      const filtered = prev.filter((p) => p.subjectId !== plan.subjectId);
+      return [plan, ...filtered];
+    });
+    showToast(`Crash study plan saved for ${plan.subjectName}`, 'success');
+  };
+
+  const toggleCrashTask = (planId: string, taskId: string) => {
+    setCrashPlans((prev) =>
+      prev.map((plan) => {
+        if (plan.id === planId) {
+          const updatedDays = plan.days.map((day) => ({
+            ...day,
+            tasks: day.tasks.map((task) => {
+              if (task.id === taskId) {
+                const nextState = !task.completed;
+                return {
+                  ...task,
+                  completed: nextState,
+                  missed: false,
+                  completedAt: nextState ? new Date().toISOString() : undefined,
+                };
+              }
+              return task;
+            }),
+          }));
+          return { ...plan, days: updatedDays, updatedAt: new Date().toISOString() };
+        }
+        return plan;
+      })
+    );
+  };
+
+  const rescheduleMissedTasks = (planId: string) => {
+    const todayStr = getRelativeDate(0);
+    setCrashPlans((prev) =>
+      prev.map((plan) => {
+        if (plan.id === planId) {
+          // Identify uncompleted tasks from past days
+          const missedTasks: CrashStudyTask[] = [];
+          plan.days.forEach((day) => {
+            if (day.date < todayStr) {
+              day.tasks.forEach((t) => {
+                if (!t.completed) {
+                  missedTasks.push({ ...t, missed: false });
+                }
+              });
+            }
+          });
+
+          if (missedTasks.length === 0) {
+            showToast('No past missed tasks found to reschedule!', 'info');
+            return plan;
+          }
+
+          // Redistribute into today and remaining days
+          const futureDays = plan.days.filter((d) => d.date >= todayStr);
+          if (futureDays.length === 0) {
+            showToast('Exam date has passed or no future days remain.', 'warning');
+            return plan;
+          }
+
+          let distributeIdx = 0;
+          const futureDayMap = new Map<number, CrashStudyTask[]>();
+          futureDays.forEach((fd) => futureDayMap.set(fd.dayNumber, []));
+
+          missedTasks.forEach((mt) => {
+            const targetDay = futureDays[distributeIdx % futureDays.length];
+            futureDayMap.get(targetDay.dayNumber)?.push({
+              ...mt,
+              id: `ct-resched-${Date.now()}-${mt.id}`,
+              date: targetDay.date,
+              dayNumber: targetDay.dayNumber,
+            });
+            distributeIdx++;
+          });
+
+          const updatedDays = plan.days.map((day) => {
+            if (day.date < todayStr) {
+              return {
+                ...day,
+                tasks: day.tasks.map((t) => (t.completed ? t : { ...t, missed: true })),
+              };
+            }
+            const appended = futureDayMap.get(day.dayNumber) || [];
+            return {
+              ...day,
+              tasks: [...day.tasks, ...appended],
+            };
+          });
+
+          showToast(`Rescheduled ${missedTasks.length} missed topics into your remaining days!`, 'success');
+          return { ...plan, days: updatedDays, updatedAt: new Date().toISOString() };
+        }
+        return plan;
+      })
+    );
+  };
+
+  // ==========================================
+  // MODULE 4: Test Copies Actions
+  // ==========================================
+  const saveTestAttempt = (record: TestAttemptRecord) => {
+    setTestAttempts((prev) => [record, ...prev]);
+    showToast(`Test evaluation complete (${record.marksObtained}/${record.maxMarks} Marks)`, 'success');
+  };
+
+  const deleteTestAttempt = (id: string) => {
+    setTestAttempts((prev) => prev.filter((t) => t.id !== id));
+    showToast('Test record deleted', 'warning');
+  };
+
+  // ==========================================
+  // MODULE 5: Mock Interview Actions
+  // ==========================================
+  const saveInterviewReport = (report: InterviewReport) => {
+    setInterviewReports((prev) => [report, ...prev]);
+    showToast(`Placement interview report saved: ${report.readinessRating}`, 'success');
+  };
+
+  const deleteInterviewReport = (id: string) => {
+    setInterviewReports((prev) => prev.filter((r) => r.id !== id));
+    showToast('Interview report deleted', 'warning');
+  };
+
   // Approve & Save Plan into actual tasks, goal, and project
   const approveAndSavePlan = (plan: AIPlan) => {
     const newGoalId = `goal-${Date.now()}`;
@@ -1005,7 +1564,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Data management
   const exportAllData = (): string => {
     const payload = {
-      version: '1.0',
+      version: '2.0-student-platform',
       exportedAt: new Date().toISOString(),
       tasks,
       goals,
@@ -1014,6 +1573,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notes,
       learningTopics,
       userProfile,
+      subjects,
+      questions,
+      crashPlans,
+      testAttempts,
+      interviewReports,
     };
     return JSON.stringify(payload, null, 2);
   };
@@ -1028,7 +1592,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (Array.isArray(data.notes)) setNotes(data.notes);
       if (Array.isArray(data.learningTopics)) setLearningTopics(data.learningTopics);
       if (data.userProfile) setUserProfile(data.userProfile);
-      showToast('All data imported successfully', 'success');
+      if (Array.isArray(data.subjects) && data.subjects.length > 0) setSubjects(data.subjects);
+      if (Array.isArray(data.questions) && data.questions.length > 0) setQuestions(data.questions);
+      if (Array.isArray(data.crashPlans) && data.crashPlans.length > 0) setCrashPlans(data.crashPlans);
+      if (Array.isArray(data.testAttempts)) setTestAttempts(data.testAttempts);
+      if (Array.isArray(data.interviewReports)) setInterviewReports(data.interviewReports);
+      showToast('All student platform data imported successfully', 'success');
       return true;
     } catch {
       showToast('Invalid JSON backup file', 'error');
@@ -1044,7 +1613,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotes(initialNotes);
     setLearningTopics(initialLearningTopics);
     setUserProfile(initialProfile);
-    showToast('Reset to default student sample data', 'info');
+    setSubjects(initialSubjects);
+    setSelectedSubjectId(initialSubjects[0]?.id || '');
+    setQuestions(initialQuestions);
+    setCrashPlans([initialCrashPlan]);
+    setTestAttempts(initialTestAttempts);
+    setInterviewReports(initialInterviewReports);
+    showToast('Reset to default university student platform sample data', 'info');
   };
 
   const clearAllData = () => {
@@ -1054,6 +1629,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProjects([]);
     setNotes([]);
     setLearningTopics([]);
+    setSubjects([]);
+    setQuestions([]);
+    setCrashPlans([]);
+    setTestAttempts([]);
+    setInterviewReports([]);
     showToast('All custom data cleared', 'warning');
   };
 
@@ -1111,6 +1691,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         userProfile,
         updateUserProfile,
+        switchAcademicLevel,
+
+        // Notifications
+        notifications,
+        unreadNotificationsCount,
+        addNotification,
+        markNotificationRead,
+        clearAllNotifications,
+        requestBrowserNotificationPermission,
+
+        // Theme
+        theme,
+        toggleTheme,
 
         approveAndSavePlan,
         exportAllData,
@@ -1135,6 +1728,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setNoteModalOpen,
         editingNote,
         setEditingNote,
+
+        // Student Success Platform Module 1: Syllabus & Notes
+        subjects,
+        selectedSubjectId,
+        setSelectedSubjectId,
+        addSubject,
+        updateSubject,
+        deleteSubject,
+        addUnitToSubject,
+
+        // Student Success Platform Module 2: Question Bank
+        questions,
+        addQuestion,
+        deleteQuestion,
+        toggleBookmarkQuestion,
+        updateQuestionRevisionStatus,
+        addCustomQuestion,
+
+        // Student Success Platform Module 3: Crash Study Planner
+        crashPlans,
+        activeCrashPlan,
+        saveCrashPlan,
+        toggleCrashTask,
+        rescheduleMissedTasks,
+
+        // Student Success Platform Module 4: Test Copies
+        testAttempts,
+        saveTestAttempt,
+        deleteTestAttempt,
+
+        // Student Success Platform Module 5: Mock Interview Reports
+        interviewReports,
+        saveInterviewReport,
+        deleteInterviewReport,
 
         toasts,
         showToast,

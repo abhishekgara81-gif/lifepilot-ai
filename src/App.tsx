@@ -13,21 +13,22 @@ import { ToastContainer } from './components/common/ToastContainer';
 
 // Pages
 import { DashboardPage } from './components/pages/DashboardPage';
-import { AIPlannerPage } from './components/pages/AIPlannerPage';
+import { SyllabusNotesPage } from './components/pages/SyllabusNotesPage';
+import { QuestionBankPage } from './components/pages/QuestionBankPage';
+import { CrashPlannerPage } from './components/pages/CrashPlannerPage';
+import { CopyCheckingPage } from './components/pages/CopyCheckingPage';
+import { MockInterviewPage } from './components/pages/MockInterviewPage';
 import { TasksPage } from './components/pages/TasksPage';
 import { CalendarPage } from './components/pages/CalendarPage';
 import { GoalsHabitsPage } from './components/pages/GoalsHabitsPage';
 import { ProjectsPage } from './components/pages/ProjectsPage';
-import { StudentCenterPage } from './components/pages/StudentCenterPage';
-import { DocumentsPage } from './components/pages/DocumentsPage';
-import { AnalyticsPage } from './components/pages/AnalyticsPage';
+import { NotificationsPage } from './components/pages/NotificationsPage';
 import { SettingsPage } from './components/pages/SettingsPage';
 
 // Modals
 import { TaskModal } from './components/modals/TaskModal';
 import { GoalModal } from './components/modals/GoalModal';
 import { ProjectModal } from './components/modals/ProjectModal';
-import { NoteModal } from './components/modals/NoteModal';
 
 const AppContent: React.FC = () => {
   const { activePage, sidebarCollapsed } = useApp();
@@ -37,8 +38,16 @@ const AppContent: React.FC = () => {
     switch (activePage) {
       case 'dashboard':
         return <DashboardPage />;
+      case 'syllabus':
+        return <SyllabusNotesPage />;
+      case 'questions':
+        return <QuestionBankPage />;
       case 'planner':
-        return <AIPlannerPage />;
+        return <CrashPlannerPage />;
+      case 'tests':
+        return <CopyCheckingPage />;
+      case 'interviews':
+        return <MockInterviewPage />;
       case 'tasks':
         return <TasksPage />;
       case 'calendar':
@@ -47,21 +56,22 @@ const AppContent: React.FC = () => {
         return <GoalsHabitsPage />;
       case 'projects':
         return <ProjectsPage />;
-      case 'student':
-        return <StudentCenterPage />;
-      case 'documents':
-        return <DocumentsPage />;
-      case 'analytics':
-        return <AnalyticsPage />;
+      case 'notifications':
+        return <NotificationsPage />;
       case 'settings':
         return <SettingsPage />;
+      // Safe redirects for retired routes
+      case 'documents':
+        return <SyllabusNotesPage />;
+      case 'student':
+      case 'analytics':
       default:
         return <DashboardPage />;
     }
   };
 
   return (
-    <div className="app-shell min-h-screen bg-slate-50 text-slate-900 flex flex-col antialiased selection:bg-blue-100 selection:text-blue-900">
+    <div className="app-shell min-h-screen bg-[#F4F8FC] dark:bg-[#111827] text-slate-900 dark:text-slate-100 flex flex-col antialiased selection:bg-blue-100 dark:selection:bg-blue-900 selection:text-blue-900 dark:selection:text-blue-100">
       {/* Desktop Fixed Sidebar */}
       <div className="hidden md:block">
         <Sidebar />
@@ -87,7 +97,6 @@ const AppContent: React.FC = () => {
       <TaskModal />
       <GoalModal />
       <ProjectModal />
-      <NoteModal />
 
       {/* Notification Toast Stack */}
       <ToastContainer />

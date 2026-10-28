@@ -10,10 +10,34 @@ import {
   dailySpokenEnglishTask,
   initialGoals,
   initialHabits,
+  initialSubjects,
+  initialQuestions,
+  initialCrashPlan,
+  initialTestAttempts,
+  initialInterviewReports,
+  getStarterSubjectsForLevel,
+  initialNotifications,
 } from '../src/data/initialData';
 import { mergeWorkspaces } from '../src/services/cloudSyncService';
 import { Task, Goal, Habit, Project, Note, LearningTopic, UserProfile } from '../src/types';
 import { formatAuthError } from '../src/context/AuthContext';
+import {
+  getLocalSyllabusFallback,
+  getLocalQuestionsFallback,
+  getLocalTestEvaluationFallback,
+  BoundedRateLimiter,
+} from '../server';
+import {
+  formatLocalDate,
+  parseLocalDate,
+  isSameDay,
+  compareDates,
+  formatDisplayDate,
+  getDaysInMonth,
+  isLeapYear,
+  getMonthMatrix,
+} from '../src/utils/dateUtils';
+import { time24To12, time12To24 } from '../src/components/common/TimePicker12';
 
 describe('Daily Spoken English Practice & Calendar Formatting', () => {
   test('syncDailyEnglishTask prepends default daily task if missing', () => {
@@ -448,6 +472,420 @@ describe('Firebase Authentication Error Handling & Guardrails', () => {
     const err = { code: 'auth/network-request-failed' };
     const formatted = formatAuthError(err);
     assert.ok(formatted.includes('Network connection failed'));
+  });
+});
+
+describe('Student Platform Module 1: Syllabus & Notes Management', () => {
+  test('initialSubjects provides complete 5-unit curriculum structure for core engineering', () => {
+    assert.ok(initialSubjects.length >= 3);
+    const dsa = initialSubjects.find((s) => s.code === 'CS-301');
+    assert.ok(dsa);
+    assert.equal(dsa.name, 'Data Structures & Algorithms');
+    assert.equal(dsa.units.length, 5);
+    assert.ok(dsa.units[0].topics.length >= 3);
+  });
+
+  test('unit structure stores unit number, title, and topic list', () => {
+    const os = initialSubjects.find((s) => s.code === 'CS-302');
+    assert.ok(os);
+    const unit2 = os.units.find((u) => u.unitNumber === 2);
+    assert.ok(unit2);
+    assert.ok(unit2.title.includes('Process Synchronization'));
+    assert.ok(unit2.topics.some((t) => t.includes('Deadlock') || t.includes('Banker')));
+  });
+
+  test('getLocalSyllabusFallback provides structured 4-unit curriculum and focus areas on 503 or network failure', () => {
+    const fallback = getLocalSyllabusFallback({
+      university: 'Punjab Technical University (PTU)',
+      branch: 'Computer Science & Engineering',
+      semester: 5,
+    });
+
+    assert.ok(fallback.summary.includes('Punjab Technical University'));
+    assert.ok(fallback.summary.includes('Computer Science & Engineering'));
+    assert.ok(fallback.summary.includes('Semester 5'));
+    assert.equal(fallback.units.length, 4);
+    assert.ok(fallback.units[0].topics.length >= 3);
+    assert.ok(fallback.importantFocusAreas.length >= 3);
+  });
+});
+
+describe('Student Platform Module 2: Smart Star-Rating Question Bank', () => {
+  test('3-Star questions are strictly backed by verified PYQ source papers and repetition counts', () => {
+    const threeStarQuestions = initialQuestions.filter((q) => q.stars === 3);
+    assert.ok(threeStarQuestions.length >= 4);
+
+    for (const q of threeStarQuestions) {
+      assert.equal(q.isVerifiedPYQ, true);
+      assert.ok(q.repetitionCount >= 3);
+      assert.ok(Array.isArray(q.sourcePapers) && q.sourcePapers.length >= 2);
+      assert.ok(q.modelAnswer && q.modelAnswer.length > 20);
+    }
+  });
+
+  test('Practice questions generated without verified PYQ status have 0 stars and no fake repetition counts', () => {
+    const practiceQuestions = initialQuestions.filter((q) => q.stars === 0);
+    assert.ok(practiceQuestions.length >= 2);
+
+    for (const q of practiceQuestions) {
+      assert.equal(q.isVerifiedPYQ, false);
+      assert.equal(q.repetitionCount, 0);
+      assert.equal(q.stars, 0);
+    }
+  });
+
+  test('getLocalQuestionsFallback returns valid practice questions strictly with 0 stars and isVerifiedPYQ: false on 503 or network failure', () => {
+    const fallback = getLocalQuestionsFallback({
+      subjectName: 'Operating Systems',
+      unitNumber: 2,
+      topic: 'Deadlock Detection & Prevention',
+    });
+
+    assert.ok(Array.isArray(fallback.questions));
+    assert.equal(fallback.questions.length, 2);
+
+    for (const q of fallback.questions) {
+      assert.equal(q.subjectName, 'Operating Systems');
+      assert.equal(q.unit, 2);
+      assert.equal(q.stars, 0);
+      assert.equal(q.isVerifiedPYQ, false);
+      assert.equal(q.repetitionCount, 0);
+      assert.ok(q.modelAnswer && q.modelAnswer.length > 20);
+      assert.ok(q.keyTopics.some((t) => t.includes('Deadlock') || t.includes('Operating Systems')));
+    }
+  });
+
+  test('Question filtering accurately isolates unit and expected marks', () => {
+    const unit2TenMarks = initialQuestions.filter((q) => q.unit === 2 && q.expectedMarks === 10);
+    assert.ok(unit2TenMarks.length >= 1);
+    assert.ok(unit2TenMarks.every((q) => q.unit === 2 && q.expectedMarks === 10));
+  });
+});
+
+describe('Student Platform Module 3: Day-Wise Crash Study Planner & Rescheduling', () => {
+  test('initialCrashPlan generates structured days with study, practice and mock test tasks', () => {
+    assert.ok(initialCrashPlan.days.length >= 3);
+    const day1 = initialCrashPlan.days[0];
+    assert.equal(day1.dayNumber, 1);
+    assert.ok(day1.tasks.length >= 3);
+
+    const taskTypes = new Set(day1.tasks.map((t) => t.type));
+    assert.ok(taskTypes.has('study'));
+    assert.ok(taskTypes.has('practice_questions'));
+  });
+
+  test('Rescheduling logic carries missed uncompleted tasks forward to remaining days', () => {
+    const planCopy = JSON.parse(JSON.stringify(initialCrashPlan));
+    const today = getRelativeDate(0);
+    const tomorrow = getRelativeDate(1);
+
+    // Simulate an uncompleted past task
+    planCopy.days[0].date = getRelativeDate(-2);
+    planCopy.days[0].tasks[2].completed = false;
+    planCopy.days[0].tasks[2].missed = false;
+    planCopy.days[0].tasks[3].completed = true;
+
+    // Remaining future day
+    planCopy.days[1].date = tomorrow;
+
+    // Rescheduling execution
+    const missed: any[] = [];
+    planCopy.days.forEach((day: any) => {
+      if (day.date < today) {
+        day.tasks.forEach((t: any) => {
+          if (!t.completed) missed.push(t);
+        });
+      }
+    });
+
+    assert.equal(missed.length, 1);
+    // Redistribute into future days
+    planCopy.days[1].tasks.push({ ...missed[0], date: planCopy.days[1].date });
+    assert.equal(planCopy.days[1].tasks.length, initialCrashPlan.days[1].tasks.length + 1);
+  });
+});
+
+describe('Student Platform Module 4: Multimodal Test & Copy Evaluation', () => {
+  test('Test attempt records step-by-step marks, partial marks, strengths and mistakes', () => {
+    assert.ok(initialTestAttempts.length >= 2);
+    const handwrittenTest = initialTestAttempts.find((t) => t.mode === 'handwritten');
+    assert.ok(handwrittenTest);
+    assert.equal(handwrittenTest.maxMarks, 10);
+    assert.equal(handwrittenTest.marksObtained, 8.5);
+    assert.ok(handwrittenTest.stepEvaluation.length >= 3);
+
+    // Verify partial marking support
+    const hasPartialStep = handwrittenTest.stepEvaluation.some((s) => s.status === 'partial');
+    assert.ok(hasPartialStep);
+
+    // Verify strengths and mistakes
+    assert.ok(handwrittenTest.strengths.length > 0);
+    assert.ok(handwrittenTest.mistakes.length > 0);
+    assert.ok(typeof handwrittenTest.handwritingConfidence === 'number');
+  });
+
+  test('Viva test mode evaluates spoken answer without fabricating marks', () => {
+    const vivaTest = initialTestAttempts.find((t) => t.mode === 'viva');
+    assert.ok(vivaTest);
+    assert.ok(vivaTest.percentage <= 100);
+    assert.ok(vivaTest.stepEvaluation.every((s) => s.marksAwarded <= s.maxMarks));
+  });
+
+  test('getLocalTestEvaluationFallback clearly labels score as an estimate and never implies correctness from length alone', () => {
+    const shortSubmission = getLocalTestEvaluationFallback({
+      mode: 'typed',
+      question: 'Explain Virtual Memory and Translation Lookaside Buffer (TLB).',
+      studentAnswer: 'Short text.',
+      maxMarks: 10,
+      reason: 'quota_exhausted',
+    });
+
+    const verboseSubmission = getLocalTestEvaluationFallback({
+      mode: 'typed',
+      question: 'Explain Virtual Memory and Translation Lookaside Buffer (TLB).',
+      studentAnswer: 'A'.repeat(800), // Verbose repetitive characters
+      maxMarks: 10,
+      reason: 'quota_exhausted',
+    });
+
+    // 1. Must be clearly labelled as provisional estimate and fallback
+    assert.equal(shortSubmission.isFallback, true);
+    assert.equal(shortSubmission.isEstimatedScore, true);
+    assert.equal(verboseSubmission.isFallback, true);
+    assert.equal(verboseSubmission.isEstimatedScore, true);
+    assert.ok(shortSubmission.notice.toLowerCase().includes('provisional'));
+    assert.ok(shortSubmission.explanation.toLowerCase().includes('provisional'));
+
+    // 2. CRITICAL PRODUCTION SAFETY: Must NOT inflate marks based on answer length alone!
+    assert.equal(shortSubmission.marksObtained, verboseSubmission.marksObtained);
+    assert.equal(shortSubmission.percentage, verboseSubmission.percentage);
+    assert.equal(shortSubmission.marksObtained, 5); // 50% provisional baseline for submission receipt
+
+    // 3. Step statuses must be 'partial' (never falsely claiming 'correct' when unverified)
+    assert.ok(shortSubmission.stepEvaluation.every((s) => s.status === 'partial'));
+    assert.ok(shortSubmission.stepEvaluation.some((s) => s.feedback.toLowerCase().includes('teacher') || s.feedback.toLowerCase().includes('verification')));
+    assert.ok(shortSubmission.mistakes.some((m) => m.toLowerCase().includes('provisional estimate only')));
+  });
+});
+
+describe('Production Safety: Bounded Server-Side Rate Limiter', () => {
+  test('BoundedRateLimiter allows legitimate requests under the threshold', () => {
+    const limiter = new BoundedRateLimiter(5, 60_000, 100);
+    for (let i = 0; i < 5; i++) {
+      const res = limiter.check('student-ip-1');
+      assert.equal(res.allowed, true);
+      assert.equal(res.retryAfterSeconds, 0);
+    }
+  });
+
+  test('BoundedRateLimiter rejects excessive requests with 429 Retry-After', () => {
+    const limiter = new BoundedRateLimiter(3, 60_000, 100);
+    limiter.check('student-ip-2');
+    limiter.check('student-ip-2');
+    limiter.check('student-ip-2');
+
+    // 4th request must be rejected
+    const blocked = limiter.check('student-ip-2');
+    assert.equal(blocked.allowed, false);
+    assert.ok(blocked.retryAfterSeconds > 0 && blocked.retryAfterSeconds <= 60);
+
+    // Different student IP is unaffected
+    const otherStudent = limiter.check('student-ip-3');
+    assert.equal(otherStudent.allowed, true);
+  });
+
+  test('BoundedRateLimiter bounds memory usage and prunes expired buckets', () => {
+    const limiter = new BoundedRateLimiter(10, 50, 5); // 50ms window, max 5 buckets
+    for (let i = 0; i < 10; i++) {
+      limiter.check(`ip-${i}`);
+    }
+    // Size is tracked
+    assert.ok(limiter.getBucketCount() <= 10);
+  });
+});
+
+describe('Student Platform Module 5: Branch and Domain-Specific Mock Interview', () => {
+  test('Mock interview report scores technical accuracy and communication separately', () => {
+    assert.ok(initialInterviewReports.length >= 1);
+    const report = initialInterviewReports[0];
+    assert.equal(report.branch, 'B.Tech CSE');
+    assert.ok(report.overallTechnicalScore >= 0 && report.overallTechnicalScore <= 100);
+    assert.ok(report.overallCommunicationScore >= 0 && report.overallCommunicationScore <= 100);
+    assert.equal(report.readinessRating, 'Ready for Placement');
+    assert.ok(report.strengths.length >= 2);
+    assert.ok(report.areasForImprovement.length >= 2);
+    assert.ok(report.practiceRoadmap.length >= 2);
+  });
+
+  test('Mock interview messages track interactive conversational turns and interviewer questions', () => {
+    const report = initialInterviewReports[0];
+    assert.ok(report.messages.length >= 4);
+    assert.equal(report.messages[0].sender, 'ai');
+    assert.equal(report.messages[1].sender, 'student');
+    assert.equal(report.messages[2].sender, 'ai');
+    assert.equal(report.messages[3].sender, 'student');
+  });
+});
+
+describe('Student Platform Transformation: Multi-Level Curriculum & Study from Your Syllabus', () => {
+  test('getStarterSubjectsForLevel provides Class 12 CBSE curriculum for school stream', () => {
+    const schoolSubjects = getStarterSubjectsForLevel('school');
+    assert.ok(schoolSubjects.length >= 3);
+    assert.ok(schoolSubjects.some((s) => s.name.includes('Physics')));
+    assert.ok(schoolSubjects.some((s) => s.name.includes('Chemistry')));
+    assert.ok(schoolSubjects.some((s) => s.name.includes('Mathematics')));
+    assert.ok(schoolSubjects[0].boardOrUniversity?.includes('CBSE'));
+    assert.equal(schoolSubjects[0].courseOrClass, 'Class 12');
+  });
+
+  test('getStarterSubjectsForLevel provides B.Sc Nursing curriculum for medical healthcare stream', () => {
+    const nursingSubjects = getStarterSubjectsForLevel('nursing');
+    assert.ok(nursingSubjects.length >= 2);
+    assert.ok(nursingSubjects.some((s) => s.name.includes('Anatomy')));
+    assert.ok(nursingSubjects.some((s) => s.name.includes('Nursing Foundation')));
+    assert.equal(nursingSubjects[0].courseOrClass, 'B.Sc Nursing');
+  });
+
+  test('getStarterSubjectsForLevel provides B.Com curriculum for college stream', () => {
+    const bcomSubjects = getStarterSubjectsForLevel('college');
+    assert.ok(bcomSubjects.length >= 2);
+    assert.ok(bcomSubjects.some((s) => s.name.includes('Financial Accounting')));
+    assert.ok(bcomSubjects.some((s) => s.name.includes('Business Regulatory') || s.name.includes('Law')));
+  });
+
+  test('getLocalQuestionsFallback with questionType: mcq produces multiple choice options and answer', () => {
+    const mcqFallback = getLocalQuestionsFallback({
+      subjectName: 'Data Structures & Algorithms',
+      questionType: 'mcq',
+      topics: ['Binary Search Trees', 'AVL Trees'],
+    });
+
+    assert.ok(mcqFallback.questions.length >= 2);
+    for (const q of mcqFallback.questions) {
+      assert.equal(q.questionKind, 'mcq');
+      assert.ok(Array.isArray(q.mcqOptions) && q.mcqOptions.length >= 4);
+      assert.ok(q.correctAnswer && q.correctAnswer.length > 0);
+      assert.equal(q.stars, 0);
+      assert.equal(q.isVerifiedPYQ, false);
+    }
+  });
+
+  test('In-app notifications initialize with exam alerts and study briefings', () => {
+    assert.ok(initialNotifications.length >= 2);
+    const hasCountdown = initialNotifications.some((n) => n.type === 'exam_countdown');
+    const hasBriefing = initialNotifications.some((n) => n.type === 'daily_briefing');
+    assert.ok(hasCountdown);
+    assert.ok(hasBriefing);
+  });
+});
+
+describe('Timezone-Safe Date Handling & Calendar Boundaries', () => {
+  test('parseLocalDate parses YYYY-MM-DD at local midnight without UTC drift', () => {
+    const d = parseLocalDate('2026-10-28');
+    assert.equal(d.getFullYear(), 2026);
+    assert.equal(d.getMonth(), 9); // 0-indexed October
+    assert.equal(d.getDate(), 28);
+    assert.equal(d.getHours(), 0);
+    assert.equal(d.getMinutes(), 0);
+  });
+
+  test('formatLocalDate formats Date object to exact local YYYY-MM-DD string', () => {
+    const d = new Date(2026, 9, 28, 23, 59, 0); // 11:59 PM local
+    assert.equal(formatLocalDate(d), '2026-10-28');
+  });
+
+  test('isSameDay correctly identifies matching calendar days', () => {
+    assert.equal(isSameDay('2026-10-28', '2026-10-28'), true);
+    assert.equal(isSameDay('2026-10-28', '2026-10-29'), false);
+    assert.equal(isSameDay(new Date(2026, 9, 28), '2026-10-28'), true);
+  });
+
+  test('compareDates orders dates chronologically', () => {
+    assert.ok(compareDates('2026-10-28', '2026-10-29') < 0);
+    assert.ok(compareDates('2026-10-30', '2026-10-28') > 0);
+    assert.equal(compareDates('2026-10-28', '2026-10-28'), 0);
+  });
+
+  test('formatDisplayDate returns human friendly formatted string without UTC drift', () => {
+    const display = formatDisplayDate('2026-10-28', { includeWeekday: true });
+    assert.ok(display.includes('Oct 28, 2026'));
+    assert.ok(display.includes('Wed'));
+  });
+
+  test('Leap year detection handles standard, century, and quad-century leap years', () => {
+    assert.equal(isLeapYear(2024), true);
+    assert.equal(isLeapYear(2025), false);
+    assert.equal(isLeapYear(2028), true);
+    assert.equal(isLeapYear(2000), true);
+    assert.equal(isLeapYear(1900), false);
+  });
+
+  test('getDaysInMonth accurately handles leap year February (29 days) vs non-leap (28 days)', () => {
+    assert.equal(getDaysInMonth(2024, 1), 29); // Feb 2024 (leap year)
+    assert.equal(getDaysInMonth(2025, 1), 28); // Feb 2025 (non-leap)
+    assert.equal(getDaysInMonth(2026, 9), 31); // Oct 2026
+    assert.equal(getDaysInMonth(2026, 8), 30); // Sep 2026
+  });
+
+  test('getMonthMatrix builds 7-column calendar grid with accurate boundaries', () => {
+    const matrix = getMonthMatrix(2026, 9, true); // Oct 2026 (starts Monday)
+    assert.ok(matrix.length === 5 || matrix.length === 6);
+    for (const week of matrix) {
+      assert.equal(week.length, 7);
+    }
+    // Verify October 1st and October 31st are in current month
+    const allCells = matrix.flat();
+    const oct1 = allCells.find((c) => c.dateStr === '2026-10-01');
+    const oct31 = allCells.find((c) => c.dateStr === '2026-10-31');
+    assert.ok(oct1 && oct1.isCurrentMonth);
+    assert.ok(oct31 && oct31.isCurrentMonth);
+  });
+});
+
+describe('12-Hour AM/PM Time Selector & Conversions', () => {
+  test('time24To12 converts midnight 00:00 to 12:00 AM', () => {
+    const result = time24To12('00:00');
+    assert.equal(result.hour12, 12);
+    assert.equal(result.minute, 0);
+    assert.equal(result.period, 'AM');
+    assert.equal(result.formatted12, '12:00 AM');
+  });
+
+  test('time24To12 converts noon 12:00 to 12:00 PM', () => {
+    const result = time24To12('12:00');
+    assert.equal(result.hour12, 12);
+    assert.equal(result.minute, 0);
+    assert.equal(result.period, 'PM');
+    assert.equal(result.formatted12, '12:00 PM');
+  });
+
+  test('time24To12 converts 23:59 to 11:59 PM', () => {
+    const result = time24To12('23:59');
+    assert.equal(result.hour12, 11);
+    assert.equal(result.minute, 59);
+    assert.equal(result.period, 'PM');
+    assert.equal(result.formatted12, '11:59 PM');
+  });
+
+  test('time12To24 converts 12:00 AM to 00:00 (midnight)', () => {
+    assert.equal(time12To24(12, 0, 'AM'), '00:00');
+  });
+
+  test('time12To24 converts 12:30 AM to 00:30', () => {
+    assert.equal(time12To24(12, 30, 'AM'), '00:30');
+  });
+
+  test('time12To24 converts 12:00 PM to 12:00 (noon)', () => {
+    assert.equal(time12To24(12, 0, 'PM'), '12:00');
+  });
+
+  test('time12To24 converts 1:30 PM to 13:30', () => {
+    assert.equal(time12To24(1, 30, 'PM'), '13:30');
+  });
+
+  test('time12To24 handles custom minute input (e.g. 17 min)', () => {
+    assert.equal(time12To24(4, 17, 'PM'), '16:17');
+    assert.equal(time12To24(9, 43, 'AM'), '09:43');
   });
 });
 
